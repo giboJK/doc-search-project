@@ -16,7 +16,7 @@ def load_data(path: str) -> pd.DataFrame:
     반환:
         pd.DataFrame: 불러온 데이터
     """
-
+    print("load_data() 함수 실행")
     # 1) 파일 존재 여부 확인
     if not os.path.exists(path):
         print(f"파일을 찾을 수 없습니다: {path}")
@@ -35,6 +35,7 @@ def explore_structure(data_frame: pd.DataFrame):
     """
     DataFrame의 기본 구조(행/열 수, 컬럼·자료형, 상위 5행)를 출력한다.
     """
+    print("explore_structure() 함수 실행")
     # 1) 행 수 / 열 수
     print("=" * 20)
     print("행/열 수")
@@ -60,12 +61,12 @@ def explore_structure(data_frame: pd.DataFrame):
     print("\n")
 
 
-def show_category_distribution(data_frame: pd.DataFrame):
+def show_category_distribution(data_frame: pd.DataFrame) -> dict:
     """
     카테고리별 문서 수·비율(%)과 평균 단어 수를 계산·출력하고 딕셔너리로 반환한다.
     """
-
-    total = len(data_frame)                          # 전체 문서 수
+    print("show_category_distribution() 함수 실행")
+    total = len(data_frame)                                   # 전체 문서 수
     category_counts = data_frame["category"].value_counts()   # 카테고리별 문서 수 (많은 순)
 
     # 1) 카테고리별 문서 수 + 비율(%)
@@ -79,10 +80,10 @@ def show_category_distribution(data_frame: pd.DataFrame):
     # 2) 반복문 + 딕셔너리로 카테고리별 '평균 단어 수' 계산
     print("=" * 20)
     print("[카테고리 분포] 평균 단어 수")
-    avg_word_counts = {}                          # 결과 담을 딕셔너리
+    avg_word_counts = {}                                  # 결과 담을 딕셔너리
     for category in data_frame["category"].unique():      # 고유 카테고리 목록 하나씩 (반복문)
         subset = data_frame[data_frame["category"] == category]   # 이 카테고리 행만 필터링
-        word_counts = []                          # 문서별 단어 수 모을 리스트
+        word_counts = []                                  # 문서별 단어 수 모을 리스트
 
         for content in subset["content"]:
             word_counts.append(len(content.split()))  # 공백 기준으로 나눈 총 단어의 수
@@ -102,6 +103,50 @@ def show_category_distribution(data_frame: pd.DataFrame):
         }
     return result
 
+def check_missing(data_frame: pd.DataFrame) -> dict:
+    """
+    컬럼별 결측치 수·비율(%)과 심각도를 파악하고 딕셔너리로 반환한다.
+    """
+    print("check_missing() 함수 실행")
+    total = len(data_frame)                      # 전체 행 수
+    missing_counts = data_frame.isnull().sum()   # 컬럼별 결측치 수 (Series)
+
+    print("=" * 20)
+    print("[결측치] 현황")
+    result = {}          # 결과 딕셔너리
+    missing_cols = []    # 결측치가 있는 컬럼 모음
+    clean_cols = []      # 결측치가 없는 컬럼 모음
+
+    for col in data_frame.columns:       # 컬럼 하나씩
+        missing_count = missing_counts[col]      # 이 컬럼 결측치 수
+        ratio = missing_count / total * 100      # 비율(%)
+
+        if missing_count > 0:
+            # 비율 기준 심각도 판단
+            if ratio < 5:
+                level = "낮음"
+            elif ratio < 20:
+                level = "주의"
+            else:
+                level = "높음"
+            print(f"{col}: {missing_count}개 ({ratio:.1f}%) → 심각도: {level}")
+            missing_cols.append(col)
+        else:
+            clean_cols.append(col)
+
+        result[col] = {"count": int(missing_count), "ratio_percent": round(ratio, 1)}
+
+    # 결측치가 있는 컬럼이 하나도 없을 때
+    if not missing_cols:
+        print("결측치가 있는 컬럼: 없음")
+
+    # 결측치가 없는 컬럼 목록
+    print(f"결측치가 없는 컬럼: {', '.join(clean_cols)}")
+    print("\n")
+
+    return result
+
 data_frame = load_data(DATA_PATH)
 explore_structure(data_frame)
 show_category_distribution(data_frame)
+check_missing(data_frame)
