@@ -4,6 +4,7 @@ import sklearn
 import os
 import sys
 
+# 파일 경로는 상수로 한 곳에서 관리한다. (week1 폴더에서 실행하는 것을 기준으로 한 상대 경로)
 DATA_PATH = "../data/tech_docs2.csv"
 
 
@@ -259,8 +260,37 @@ def numpy_doc_stats(data_frame: pd.DataFrame) -> dict:
     }
     return result
 
-data_frame = load_data(DATA_PATH)
-explore_structure(data_frame)
-show_category_distribution(data_frame)
-check_missing(data_frame)
-numpy_doc_stats(data_frame)
+def main():
+    print("=" * 20)
+    print("week1 데이터 탐색")
+    print(f"데이터 파일: {DATA_PATH}")
+    print("=" * 20)
+    print("\n")
+
+    # [1] 데이터 불러오기
+    print("[1] 데이터 불러오기")
+    data_frame = load_data(DATA_PATH)
+
+    # [2] 데이터 구조 확인
+    print("[2] 데이터 구조 확인")
+    explore_structure(data_frame)
+
+    # [3] 카테고리 분포 확인
+    print("[3] 카테고리 분포 확인")
+    show_category_distribution(data_frame)
+
+    # [4] 결측치 현황 파악
+    print("[4] 결측치 현황 파악")
+    check_missing(data_frame)
+
+    # [5] 문서 길이 통계량 계산
+    print("[5] 문서 길이 통계량 계산")
+    numpy_doc_stats(data_frame)
+
+    print("=" * 20)
+    print("전체 실행 완료")
+    print("=" * 20)
+
+
+if __name__ == "__main__":
+    main()
