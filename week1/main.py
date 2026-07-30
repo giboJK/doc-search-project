@@ -4,7 +4,7 @@ import sklearn
 import os
 import sys
 
-DATA_PATH = "../data/tech_docs.csv"
+DATA_PATH = "../data/tech_docs2.csv"
 
 
 def load_data(path: str) -> pd.DataFrame:
@@ -86,7 +86,15 @@ def show_category_distribution(data_frame: pd.DataFrame) -> dict:
         word_counts = []                                  # 문서별 단어 수 모을 리스트
 
         for content in subset["content"]:
+            if pd.isnull(content):                    # 내용이 결측치인 문서는 평균 계산에서 제외
+                continue
             word_counts.append(len(content.split()))  # 공백 기준으로 나눈 총 단어의 수
+
+        # 이 카테고리의 문서 내용이 모두 결측치이면 평균을 낼 수 없음
+        if not word_counts:
+            avg_word_counts[category] = 0.0
+            print(f"{category}: 내용이 모두 결측치여서 평균을 계산할 수 없습니다")
+            continue
 
         avg = sum(word_counts) / len(word_counts)     # 전체 단어수의 평균값
         avg_word_counts[category] = avg               # 딕셔너리에 저장
