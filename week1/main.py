@@ -5,7 +5,7 @@ import os
 import sys
 
 # 파일 경로는 상수로 한 곳에서 관리한다. (week1 폴더에서 실행하는 것을 기준으로 한 상대 경로)
-DATA_PATH = "../data/tech_docs2.csv"
+DATA_PATH = "../data/tech_docs.csv"
 
 
 def load_data(path: str) -> pd.DataFrame:
