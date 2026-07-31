@@ -80,7 +80,6 @@ def preprocess(data_frame: pd.DataFrame) -> pd.DataFrame:
     return clean_df
 
 
-
 def cosine_similarity_numpy(vec1: np.ndarray, vec2: np.ndarray) -> float:
     # 벡터의 내적 계산
     dot_product = np.dot(vec1, vec2)
@@ -92,6 +91,74 @@ def cosine_similarity_numpy(vec1: np.ndarray, vec2: np.ndarray) -> float:
         return 0
     return dot_product / (norm_vec1 * norm_vec2)
 
+
+def build_word_sets(data_frame: pd.DataFrame) -> pd.DataFrame:
+    """
+    문서별 단어 집합(set)을 미리 만들어 word_set 컬럼으로 저장한 DataFrame을 반환한다.
+    검색할 때마다 집합을 다시 만들지 않도록, 한 번만 계산해두는 용도다.
+
+    매개변수:
+        data_frame (pd.DataFrame): preprocess()를 거쳐 content_clean 컬럼이 있는 데이터
+    반환:
+        pd.DataFrame: word_set 컬럼이 추가된 데이터
+    """
+    print("build_word_sets() 함수 실행")
+
+    # 원본을 건드리지 않도록 복사본에 컬럼을 추가한다
+    result = data_frame.copy()
+    result["word_set"] = result["content_clean"].apply(lambda text: set(text.split()))
+
+    print(f"단어 집합 생성 완료: {len(result)}개 문서 (word_set 컬럼 추가)\n")
+
+    return result
+
+
+def keyword_search(data_frame: pd.DataFrame, query: str, top_k: int = 5) -> pd.DataFrame:
+    """
+    TF-IDF 없이, 질문 단어가 문서에 몇 개나 겹치는지(교집합 크기)만으로 점수를 매겨
+    점수가 높은 순으로 Top-k 문서를 반환한다. TF-IDF와 비교할 기준선(Baseline)이 된다.
+
+    매개변수:
+        data_frame (pd.DataFrame): 검색 대상 데이터 (build_word_sets()로 word_set 컬럼을 미리 만들어 두면 그대로 재사용한다)
+        query (str): 검색할 질문
+        top_k (int): 반환할 문서 수
+    반환:
+        pd.DataFrame: 점수 내림차순 상위 k개 (doc_id, title, category, score)
+    """
+    print("keyword_search() 함수 실행")
+
+    # 1) 질문을 정제하고 단어 집합으로 만든다
+    query_words = set(clean_text(query).split())
+
+    # 질문에 남는 단어가 없으면 검색할 수 없다
+    if not query_words:
+        print("질문에서 검색할 단어를 찾지 못했습니다.\n")
+        return data_frame
+
+    # 2) 문서별 단어 집합은 미리 만들어 둔 word_set 컬럼을 그대로 쓴다
+    if "word_set" not in data_frame.columns:
+        data_frame = build_word_sets(data_frame)
+
+    # 3) 질문 집합과의 교집합 크기를 점수로 매긴다
+    scores = []
+    for doc_words in data_frame["word_set"]:
+        overlap = query_words & doc_words        # 질문과 겹치는 단어 (교집합)
+        scores.append(len(overlap))              # 겹치는 단어 수 = 점수
+
+    # 4) 필요한 컬럼만 뽑아 점수 컬럼을 붙인다
+    result = data_frame[["doc_id", "title", "category"]].copy()
+    result["score"] = scores
+
+    # 5) 점수 내림차순으로 정렬한 뒤 상위 k개만 남긴다
+    result = result.sort_values("score", ascending=False).head(top_k)
+
+    print(f"[검색 결과] 상위 {len(result)}개")
+    print(result.to_string(index=False))
+    print("\n")
+
+    return result
+
+
 def main():
     print("=" * 20)
     print("week2 텍스트 전처리")
@@ -99,11 +166,10 @@ def main():
     print("=" * 20)
     print("\n")
 
-    # [1] 데이터 불러오기
     print("[1] 데이터 불러오기")
     data_frame = load_data(DATA_PATH)
 
-    # [2] 텍스트 전처리
+    # [1] 텍스트 전처리
     print("[2] 텍스트 전처리")
     clean_df = preprocess(data_frame)
 
@@ -113,15 +179,18 @@ def main():
     print(clean_df[["content", "content_clean"]].head(3))
     print("\n")
 
-    # [3] NumPy로 문서 길이 통계량 계산
+    # [2] NumPy로 문서 길이 통계량 계산
     print("[3] NumPy로 문서 길이 통계량 계산")
     print(cosine_similarity_numpy(np.array([1, 2, 3]), np.array([1, 2, 3])))
     print(cosine_similarity_numpy(np.array([1, 0, 0]), np.array([0, 0, 1])))
+    print("\n")
 
+    # [3] 키워드 기반 Baseline 검색
+    print("[4] 키워드 기반 Baseline 검색")
+    search_df = build_word_sets(clean_df)   # 문서별 단어 집합은 한 번만 만들어 두고 재사용한다
+    keyword_search(search_df, "How does gradient descent work?", top_k=5)
 
-    print("=" * 20)
-    print("전체 실행 완료")
-    print("=" * 20)
+    print("=====전체 실행 완료=====")
 
 
 if __name__ == "__main__":
